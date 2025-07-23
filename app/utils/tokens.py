@@ -14,8 +14,8 @@ def create_access_token(user: Any):
     """Creates a JWT token containing all user information."""
     expires_delta = timedelta(minutes=config.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    # Check if it's a User or Mechanic object
-    if hasattr(user, 'email'):  # User object
+    # Check if it's a User or Mechanic object by checking for role attribute
+    if hasattr(user, 'role'):  # User object
         to_encode = {
             "id": str(user.id),
             "name": user.full_name,
@@ -24,7 +24,7 @@ def create_access_token(user: Any):
             "type": "user",
             "exp": get_utc_now() + expires_delta,
         }
-    else:  # Mechanic object
+    else:  # Mechanic object (no role field)
         to_encode = {
             "id": str(user.id),
             "name": user.full_name,
@@ -42,8 +42,8 @@ def create_refresh_token(user: Any):
     """Creates a long-term refresh_token containing user information."""
     expires_delta = timedelta(days=7)  # 7 days for refresh token
 
-    # Check if it's a User or Mechanic object
-    if hasattr(user, 'email'):  # User object
+    # Check if it's a User or Mechanic object by checking for role attribute
+    if hasattr(user, 'role'):  # User object
         to_encode = {
             "id": str(user.id),
             "name": user.full_name,
@@ -52,7 +52,7 @@ def create_refresh_token(user: Any):
             "type": "user",
             "exp": get_utc_now() + expires_delta,
         }
-    else:  # Mechanic object
+    else:  # Mechanic object (no role field)
         to_encode = {
             "id": str(user.id),
             "name": user.full_name,

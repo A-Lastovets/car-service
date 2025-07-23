@@ -11,11 +11,15 @@ load_dotenv()
 # Get database URL from environment variable
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./car_service.db")
 
+# Ensure we're using SQLite
+if not DATABASE_URL.startswith("sqlite"):
+    DATABASE_URL = "sqlite+aiosqlite:///./car_service.db"
+
 # Create async engine
 engine = create_async_engine(
     DATABASE_URL,
     echo=os.getenv("DB_ECHO", "True").lower() == "true",  # Set to False in production
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+    connect_args={"check_same_thread": False}
 )
 
 # Create session factory

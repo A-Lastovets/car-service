@@ -1,26 +1,27 @@
 from app.schemas.base_schema import BaseSchema
 from typing import Literal
-from datetime import date
+from datetime import date, datetime
 
 class MechanicCreateSchema(BaseSchema):
-    name: str
-    birth_date: date
-    login: str
+    email: str
     password: str
-    role: Literal["admin", "mechanic"]
-    position: str
+    full_name: str
+    phone: str | None = None
+    specialization: str | None = None
 
 class MechanicLoginSchema(BaseSchema):
-    login: str
+    email: str
     password: str
 
 class MechanicResponseSchema(BaseSchema):
     id: int
-    name: str
-    birth_date: date
-    login: str
-    role: str
-    position: str
+    email: str
+    full_name: str
+    phone: str | None
+    specialization: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

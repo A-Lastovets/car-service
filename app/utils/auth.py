@@ -20,9 +20,9 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     return result.scalar_one_or_none()
 
 
-# Get mechanic by login
-async def get_mechanic_by_login(db: AsyncSession, login: str) -> Mechanic | None:
-    result = await db.execute(select(Mechanic).where(Mechanic.login == login))
+# Get mechanic by email
+async def get_mechanic_by_email(db: AsyncSession, email: str) -> Mechanic | None:
+    result = await db.execute(select(Mechanic).where(Mechanic.email == email.lower()))
     return result.scalar_one_or_none()
 
 
@@ -40,20 +40,20 @@ async def get_current_user_id(request: Request) -> int:
 
 # User authentication
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
-    result = await db.execute(select(User).where(User.email == email))
+    result = await db.execute(select(User).where(User.email == email.lower()))
     user = result.scalar_one_or_none()
 
-    if not user or not pwd_context.verify(password, user.password):
+    if not user or not pwd_context.verify(password, user.hashed_password):
         return None
     return user
 
 
 # Mechanic authentication
-async def authenticate_mechanic(db: AsyncSession, login: str, password: str) -> Mechanic | None:
-    result = await db.execute(select(Mechanic).where(Mechanic.login == login))
+async def authenticate_mechanic(db: AsyncSession, email: str, password: str) -> Mechanic | None:
+    result = await db.execute(select(Mechanic).where(Mechanic.email == email.lower()))
     mechanic = result.scalar_one_or_none()
 
-    if not mechanic or not pwd_context.verify(password, mechanic.password):
+    if not mechanic or not pwd_context.verify(password, mechanic.hashed_password):
         return None
     return mechanic
 

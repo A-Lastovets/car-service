@@ -22,9 +22,13 @@ class UserRegisterSchema(BaseSchema):
     def password_validation(cls, v):
         return validate_password_schema(v)
 
+class UserLoginSchema(BaseSchema):
+    email: EmailStr
+    password: str
+
 class UserResponseSchema(BaseSchema):
     id: int
-    name: str
+    full_name: str
     email: EmailStr
     role: str
 
