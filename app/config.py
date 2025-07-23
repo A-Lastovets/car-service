@@ -1,104 +1,33 @@
 import os
-from typing import Any, Dict, Optional
-
-from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+from typing import Optional
+from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
 
-
-class DatabaseSettings(BaseSettings):
-    DATABASE_URL: str
-
-
-class AuthSettings(BaseSettings):
-    SECRET_KEY: str
-    ALGORITHM: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
-    RESET_TOKEN_EXPIRE_MINUTES: int
-    REFRESH_TOKEN_EXPIRE_DAYS: int
-
-
-class FrontendSettings(BaseSettings):
-    FRONTEND_URL: str
-    FRONTEND_URL_FOR_LINKS: str
-
-    @property
-    def allowed_origins(self) -> list[str]:
-        return [url.strip() for url in self.FRONTEND_URL.split(",")]
-
-    @property
-    def frontend_url_for_links(self) -> str:
-        return self.FRONTEND_URL_FOR_LINKS.split(",")[0]
-
-
-class RedisSettings(BaseSettings):
-    REDIS_PASSWORD: Optional[str] = None
-    REDIS_HOST: str
-    REDIS_PORT: int
-
-    @property
-    def redis_url(self) -> str:
-        password_part = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
-        return f"redis://{password_part}{self.REDIS_HOST}:{self.REDIS_PORT}/0"
-
-
-class CelerySettings(BaseSettings):
-    CELERY_BROKER_URL: Optional[str] = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.CELERY_BROKER_URL:
-            redis_settings = RedisSettings()
-            self.CELERY_BROKER_URL = redis_settings.redis_url
-
-
-class EmailSettings(BaseSettings):
-    SMTP_SERVER: str
-    SMTP_PORT: int
-    SMTP_USERNAME: str
-    SMTP_PASSWORD: str
-    EMAIL_FROM: str
-
-
-class AppSettings(
-    DatabaseSettings,
-    AuthSettings,
-    FrontendSettings,
-    RedisSettings,
-    CelerySettings,
-    EmailSettings,
-):
+class Settings(BaseSettings):
+    # Database settings
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    DB_ECHO: bool = os.getenv("DB_ECHO", "True").lower() == "true"
+    
+    # JWT settings
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    ALGORITHM: str = os.getenv("ALGORITHM")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+    
+    # Email settings (optional)
+    SMTP_SERVER: Optional[str] = os.getenv("SMTP_SERVER")
+    SMTP_PORT: Optional[int] = int(os.getenv("SMTP_PORT", "0")) if os.getenv("SMTP_PORT") else None
+    SMTP_USERNAME: Optional[str] = os.getenv("SMTP_USERNAME")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    
+    # Redis settings (for Celery, optional)
+    REDIS_URL: Optional[str] = os.getenv("REDIS_URL")
+    
     class Config:
-        env_file = "./.env"
-        env_file_encoding = "utf-8"
-        extra = "allow"
+        env_file = ".env"
+        extra = "allow"  # Allow extra fields from .env file
 
-
-class LogConfig(BaseSettings):
-    LOGGER_NAME: str = "app"
-    LOG_FORMAT: str = "%(levelprefix)s | %(asctime)s | %(message)s"
-    LOG_LEVEL: str = "DEBUG"
-
-    version: int = 1
-    disable_existing_loggers: bool = False
-    formatters: Dict[str, Any] = {
-        "default": {
-            "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": LOG_FORMAT,
-            "datefmt": "%Y-%m-%d %H:%M:%S",
-        },
-    }
-    handlers: Dict[str, Any] = {
-        "default": {
-            "formatter": "default",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-        },
-    }
-    loggers: Dict[str, Any] = {
-        LOGGER_NAME: {"handlers": ["default"], "level": LOG_LEVEL},
-    }
-
-
-config = AppSettings()
+# Create config instance
+config = Settings()

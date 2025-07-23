@@ -9,44 +9,39 @@ from app.routers.documents_router import router as documents_router
 from app.routers.appointments_router import router as appointments_router
 from app.routers.admin_router import router as admin_router
 from contextlib import asynccontextmanager
-from logging.config import dictConfig
-from app.config import LogConfig
-from app.dependencies.cache import redis_client
 from app.middlewares.middlewares import setup_middlewares
 from app.services.init_admin import create_initial_admin, create_initial_admin_mechanic
 
-dictConfig(LogConfig().dict())
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Управління ресурсами під час життєвого циклу API"""
+    """Manage application lifecycle resources"""
     try:
-        redis = await redis_client.get_redis()
-        if redis:
-            logger.info("✅ Redis успішно підключено")
-        else:
-            logger.error("❌ Не вдалося підключитися до Redis!")
-
         # Initialize admin users if they don't exist
         logger.info("🔧 Checking for initial admin users...")
-        create_initial_admin()
-        create_initial_admin_mechanic()
+        await create_initial_admin()
+        await create_initial_admin_mechanic()
+        logger.info("✅ Admin initialization completed")
 
         yield
 
     except Exception as e:
-        logger.error(f"❌ Помилка при запуску сервера: {e}")
+        logger.error(f"❌ Error during server startup: {e}")
         raise e
 
     finally:
-        await redis_client.close_redis()
-        logger.info("🔴 Підключення до Redis закрито")
+        logger.info("🔴 Application shutdown complete")
 
 app = FastAPI(
     lifespan=lifespan,
     title="Car Service API",
-    description="API для управління записами на обслуговування автомобілів",
+    description="API for managing car service appointments",
     version="1.0.0",
     swagger_ui_parameters={"persistAuthorization": True},
 )
@@ -62,4 +57,4 @@ app.include_router(documents_router)
 app.include_router(appointments_router)
 app.include_router(admin_router)
 
-logger.info("✅ Service API успішно запущено!")
+logger.info("✅ Car Service API successfully started!")

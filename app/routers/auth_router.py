@@ -3,7 +3,7 @@ from app.schemas.user_schema import UserCreateSchema, UserRegisterSchema, UserRe
 from app.models.user import User
 from app.utils.auth import authenticate_user
 from app.utils.tokens import create_access_token
-from utils.password import get_password_hash
+from app.utils.password import get_password_hash
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.database import get_db

@@ -2,12 +2,18 @@ import logging
 
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import config
-
 
 def setup_middlewares(app):
-    allow_origins = config.allowed_origins
-    logging.info(f"Allowed CORS origins: {allow_origins}")
+    # Simple CORS configuration
+    allow_origins = [
+        "http://localhost:3000",  # React development server
+        "http://localhost:8080",  # Vue development server
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8080",
+        "*"  # Allow all origins in development (remove in production)
+    ]
+    
+    logging.info(f"Setting up CORS with origins: {allow_origins}")
 
     app.add_middleware(
         CORSMiddleware,

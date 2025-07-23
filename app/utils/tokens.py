@@ -1,17 +1,13 @@
-from datetime import datetime, timedelta, timezone
-from typing import Dict, Any, Optional, Tuple
-import uuid
-import logging
-
+import jwt
+from datetime import datetime, timedelta
+from typing import Any, Optional
 from fastapi import HTTPException, status
-from jose import ExpiredSignatureError, JWTError, jwt
-
 from app.config import config
 
-logger = logging.getLogger(__name__)
-
+# Get current UTC time
 def get_utc_now():
-    return datetime.now(timezone.utc)
+    """Get current UTC time."""
+    return datetime.utcnow()
 
 # Create JWT token
 def create_access_token(user: Any):
@@ -22,7 +18,7 @@ def create_access_token(user: Any):
     if hasattr(user, 'email'):  # User object
         to_encode = {
             "id": str(user.id),
-            "name": user.name,
+            "name": user.full_name,
             "email": user.email,
             "role": user.role,
             "type": "user",
@@ -31,9 +27,9 @@ def create_access_token(user: Any):
     else:  # Mechanic object
         to_encode = {
             "id": str(user.id),
-            "name": user.name,
-            "login": user.login,
-            "role": user.role,
+            "name": user.full_name,
+            "email": user.email,
+            "role": "mechanic",
             "type": "mechanic",
             "exp": get_utc_now() + expires_delta,
         }
@@ -44,13 +40,13 @@ def create_access_token(user: Any):
 # Create refresh JWT token
 def create_refresh_token(user: Any):
     """Creates a long-term refresh_token containing user information."""
-    expires_delta = timedelta(days=config.REFRESH_TOKEN_EXPIRE_DAYS)
+    expires_delta = timedelta(days=7)  # 7 days for refresh token
 
     # Check if it's a User or Mechanic object
     if hasattr(user, 'email'):  # User object
         to_encode = {
             "id": str(user.id),
-            "name": user.name,
+            "name": user.full_name,
             "email": user.email,
             "role": user.role,
             "type": "user",
@@ -59,9 +55,9 @@ def create_refresh_token(user: Any):
     else:  # Mechanic object
         to_encode = {
             "id": str(user.id),
-            "name": user.name,
-            "login": user.login,
-            "role": user.role,
+            "name": user.full_name,
+            "email": user.email,
+            "role": "mechanic",
             "type": "mechanic",
             "exp": get_utc_now() + expires_delta,
         }
@@ -72,7 +68,7 @@ def create_refresh_token(user: Any):
 # Create password reset token
 def create_password_reset_token(email: str):
     """Creates a password reset token with expiration time."""
-    expires_delta = timedelta(minutes=config.RESET_TOKEN_EXPIRE_MINUTES)
+    expires_delta = timedelta(minutes=15)  # 15 minutes for password reset
     
     to_encode = {
         "sub": email,
@@ -112,34 +108,51 @@ def decode_jwt_token(token: str):
                 "name": payload.get("name"),
                 "email": payload.get("email"),
                 "role": payload.get("role"),
-                "type": "user",
-                "exp": payload.get("exp"),
+                "type": "user"
             }
-        else:  # mechanic
+        elif token_type == "mechanic":
             user_data = {
                 "id": payload.get("id"),
                 "name": payload.get("name"),
-                "login": payload.get("login"),
-                "role": payload.get("role"),
-                "type": "mechanic",
-                "exp": payload.get("exp"),
+                "email": payload.get("email"),
+                "role": "mechanic",
+                "type": "mechanic"
             }
-
-        # Make sure all key fields are in the token
-        if None in user_data.values():
+        else:
             raise credentials_exception
 
-        # Check if role is valid
-        if user_data["role"] not in ["customer", "mechanic", "admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid user role",
-            )
+        # Validate required fields
+        if not all([user_data["id"], user_data["email"], user_data["role"]]):
+            raise credentials_exception
 
         return user_data
 
-    except ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token has expired")
-
-    except JWTError:
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.JWTError:
         raise credentials_exception
+
+
+# Verify password reset token
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verifies password reset token and returns email if valid."""
+    try:
+        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        
+        if payload.get("type") != "password_reset":
+            return None
+            
+        email = payload.get("sub")
+        if not email:
+            return None
+            
+        return email
+        
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.JWTError:
+        return None

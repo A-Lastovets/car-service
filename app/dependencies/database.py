@@ -1,35 +1,38 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+import os
+from dotenv import load_dotenv
 
-from app.config import config
+# Load environment variables
+load_dotenv()
 
-# Configure engine with MySQL-specific settings
+# Get database URL from environment variable
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./car_service.db")
+
+# Create async engine
 engine = create_async_engine(
-    config.DATABASE_URL,
-    echo=True,
-    future=True,
-    # MySQL-specific connection arguments
-    connect_args={
-        "charset": "utf8mb4",
-        "autocommit": False,
-        "ssl": False,
-    },
-    # Pool settings for better performance
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=10,
-    max_overflow=20,
+    DATABASE_URL,
+    echo=os.getenv("DB_ECHO", "True").lower() == "true",  # Set to False in production
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 )
 
-SessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+# Create session factory
+AsyncSessionLocal = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
-Base = declarative_base()
+# Import Base from models
+from app.models.base import Base
 
-
+# Dependency to get database session
 async def get_db():
-    async with SessionLocal() as session:
-        yield session
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
 async def init_db():

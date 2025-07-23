@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
 from sqlalchemy.orm import relationship
-from app.dependencies.database import Base
+from app.models.base import Base
 
 class Appointment(Base):
     __tablename__ = "appointments"
@@ -13,7 +13,7 @@ class Appointment(Base):
     appointment_date = Column(DateTime, nullable=False)
     status = Column(String, default="scheduled")
 
-    user = relationship("User", backref="appointments")
-    car = relationship("Car", backref="appointments")
-    service = relationship("Service", backref="appointments")
-    mechanic = relationship("Mechanic", backref="appointments")
+    user = relationship("User", back_populates="appointments")
+    car = relationship("Car", back_populates="appointments")
+    service = relationship("Service", back_populates="appointments")
+    mechanic = relationship("Mechanic", back_populates="appointments")

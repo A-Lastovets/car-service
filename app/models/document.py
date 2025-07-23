@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
-from app.dependencies.database import Base
+from app.models.base import Base
 
 class Document(Base):
     __tablename__ = "documents"
