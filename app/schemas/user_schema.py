@@ -7,7 +7,7 @@ class UserCreateSchema(BaseSchema):
     name: str
     email: EmailStr
     password: str
-    role: Literal["admin", "customer"]
+    role: Literal["admin", "customer", "mechanic"]
 
     @field_validator("password")
     def password_validation(cls, v):
@@ -34,3 +34,31 @@ class UserResponseSchema(BaseSchema):
 
     class Config:
         from_attributes = True
+
+class Token(BaseSchema):
+    """Schema for JWT tokens (access and refresh)."""
+    access_token: str
+    refresh_token: str
+    token_type: str
+
+class TokenResponse(BaseSchema):
+    """Response schema for returning tokens."""
+    tokens: Token
+
+class LoginRequest(BaseSchema):
+    """Request schema for user login."""
+    email: EmailStr
+    password: str
+
+class LogoutResponse(BaseSchema):
+    """Response schema for logout endpoint."""
+    message: str
+
+class PasswordResetRequest(BaseSchema):
+    """Request schema for password recovery (forgot password)."""
+    email: EmailStr
+
+class PasswordReset(BaseSchema):
+    """Request schema for resetting the password using a token."""
+    token: str
+    new_password: str

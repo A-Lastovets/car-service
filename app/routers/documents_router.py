@@ -1,12 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from app.models.document import Document
 from app.schemas.document_schema import DocumentResponseSchema
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.database import get_db
 import shutil
 import os
 from fastapi import HTTPException
-from app.utils.auth import get_current_user
+from app.utils.auth import role_required_with_cache
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -17,7 +17,8 @@ async def upload_document(
     mechanic_id: int = Form(...),
     type: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(role_required_with_cache(["mechanic", "admin"]))
 ):
     file_path = f"{UPLOAD_FOLDER}/{file.filename}"
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -26,13 +27,15 @@ async def upload_document(
 
     document = Document(mechanic_id=mechanic_id, type=type, file_path=file_path)
     db.add(document)
-    db.commit()
-    db.refresh(document)
+    await db.commit()
+    await db.refresh(document)
     return document
 
 @router.put("/{document_id}", response_model=DocumentResponseSchema)
-async def update_document(document_id: int, type: str = Form(...), file: UploadFile = File(None), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    document = db.query(Document).filter(Document.id == document_id).first()
+async def update_document(document_id: int, type: str = Form(...), file: UploadFile = File(None), db: AsyncSession = Depends(get_db), current_user=Depends(role_required_with_cache(["mechanic", "admin"]))):
+    from sqlalchemy.future import select
+    result = await db.execute(select(Document).where(Document.id == document_id))
+    document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=404, detail="Документ не знайдено")
     if current_user.role != "admin" and document.mechanic_id != current_user.id:
@@ -43,17 +46,19 @@ async def update_document(document_id: int, type: str = Form(...), file: UploadF
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         document.file_path = file_path
-    db.commit()
-    db.refresh(document)
+    await db.commit()
+    await db.refresh(document)
     return document
 
 @router.delete("/{document_id}")
-async def delete_document(document_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    document = db.query(Document).filter(Document.id == document_id).first()
+async def delete_document(document_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(role_required_with_cache(["mechanic", "admin"]))):
+    from sqlalchemy.future import select
+    result = await db.execute(select(Document).where(Document.id == document_id))
+    document = result.scalar_one_or_none()
     if not document:
         raise HTTPException(status_code=404, detail="Документ не знайдено")
     if current_user.role != "admin" and document.mechanic_id != current_user.id:
         raise HTTPException(status_code=403, detail="Немає доступу")
-    db.delete(document)
-    db.commit()
+    await db.delete(document)
+    await db.commit()
     return {"detail": "Документ видалено"}

@@ -12,6 +12,7 @@ class Car(Base):
     model = Column(String(100), nullable=False)
     year = Column(Integer)
     license_plate = Column(String(20), unique=True, index=True)
+    plate_number = Column(String)
     vin = Column(String(17), unique=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

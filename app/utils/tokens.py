@@ -133,7 +133,7 @@ def decode_jwt_token(token: str):
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
 
 

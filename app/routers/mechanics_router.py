@@ -4,7 +4,7 @@ from app.schemas.mechanic_schema import MechanicCreateSchema, MechanicResponseSc
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.database import get_db
 from typing import List
-from app.utils.auth import get_current_user, authenticate_mechanic
+from app.utils.auth import admin_required, authenticate_mechanic
 from app.utils.tokens import create_access_token
 from app.utils.password import get_password_hash
 from passlib.context import CryptContext
@@ -14,9 +14,7 @@ router = APIRouter(prefix="/mechanics", tags=["Mechanics"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @router.post("/", response_model=MechanicResponseSchema)
-async def create_mechanic(mechanic: MechanicCreateSchema, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Тільки адміністратор може створювати механіків")
+async def create_mechanic(mechanic: MechanicCreateSchema, db: AsyncSession = Depends(get_db), current_user=Depends(admin_required)):
     
     # Check if mechanic with this email already exists
     from sqlalchemy.future import select
@@ -56,9 +54,7 @@ async def get_mechanics(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 @router.put("/{mechanic_id}", response_model=MechanicResponseSchema)
-async def update_mechanic(mechanic_id: int, mechanic: MechanicCreateSchema, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Тільки адміністратор може змінювати механіків")
+async def update_mechanic(mechanic_id: int, mechanic: MechanicCreateSchema, db: AsyncSession = Depends(get_db), current_user=Depends(admin_required)):
     
     from sqlalchemy.future import select
     result = await db.execute(select(Mechanic).where(Mechanic.id == mechanic_id))
@@ -80,9 +76,7 @@ async def update_mechanic(mechanic_id: int, mechanic: MechanicCreateSchema, db: 
     return db_mechanic
 
 @router.delete("/{mechanic_id}")
-async def delete_mechanic(mechanic_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(get_current_user)):
-    if current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Тільки адміністратор може видаляти механіків")
+async def delete_mechanic(mechanic_id: int, db: AsyncSession = Depends(get_db), current_user=Depends(admin_required)):
     
     from sqlalchemy.future import select
     result = await db.execute(select(Mechanic).where(Mechanic.id == mechanic_id))
